@@ -12,5 +12,7 @@ public interface UserRepository extends MongoRepository<UserEntity, String> {
 
   public boolean existsByUsername(String username);
 
+  public UserEntity findByUsername(String username);
+
   List<UserEntity> findByRegistrationStatusOrderByScoreDesc(RegistrationStatus registrationStatus);
 }

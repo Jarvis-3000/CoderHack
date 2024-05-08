@@ -22,19 +22,29 @@ public class UserServicesImpl implements UserServices {
   @Override
   public boolean register(RegisterUserDTO registerUserDTO) throws ResponseStatusException {
     String username = registerUserDTO.getUsername();
+    UserEntity user = userRepository.findByUsername(username);
 
-    if (userRepository.existsByUsername(username)) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT);
+    // if user exists
+    if (user != null) {
+      if (user.getRegistrationStatus() == RegistrationStatus.REGISTERED) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT);
+      } else {
+        user.setRegistrationStatus(RegistrationStatus.REGISTERED);
+
+        // save the user with updated data
+        userRepository.save(user);
+      }
+
+    } else {
+      UserEntity newUser = new UserEntity();
+      newUser.setUsername(username);
+      newUser.setScore(0);
+      newUser.setRegistrationStatus(RegistrationStatus.REGISTERED);
+      newUser.setBadges(new HashSet<>());
+
+      // save the user with new data
+      userRepository.save(newUser);
     }
-
-    UserEntity user = new UserEntity();
-    user.setUsername(username);
-    user.setScore(0);
-    user.setRegistrationStatus(RegistrationStatus.REGISTERED);
-    user.setBadges(new HashSet<>());
-
-    // save the user with new data
-    userRepository.save(user);
 
     return true;
   }
@@ -45,6 +55,8 @@ public class UserServicesImpl implements UserServices {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
     registeredUser.setRegistrationStatus(RegistrationStatus.CANCELLED);
+    registeredUser.setBadges(new HashSet<>());
+    registeredUser.setScore(0);
 
     // save the user with updates data
     userRepository.save(registeredUser);
@@ -60,7 +72,14 @@ public class UserServicesImpl implements UserServices {
 
   @Override
   public UserEntity getUserById(String userId) throws ResponseStatusException {
-    return userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    UserEntity registeredUser = userRepository.findById(userId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+    if (registeredUser.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    }
+
+    return registeredUser;
   }
 
   @Override
